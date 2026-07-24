@@ -429,7 +429,7 @@
     </div>
   </div>
 
-  <form id="vela-form" action="https://formspree.io/f/xlgqpeap" method="POST">
+  <form id="vela-form" action="https://formspree.io/f/xlgqpeap" method="POST" accept-charset="UTF-8">
 
     <!-- Step 1: Basic Information -->
     <div class="step active" id="step1">
@@ -674,20 +674,35 @@
   updateUI();
 
   const form = document.getElementById('vela-form');
-  form.addEventListener('submit', function(e) {
+  form.addEventListener('submit', async function(e) {
     e.preventDefault();
-    if(!validateStep(currentStep)) return;
+    if (!validateStep(currentStep)) return;
 
     form.classList.add('submitting');
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.innerHTML = 'Sending…';
     submitBtn.disabled = true;
 
-    setTimeout(() => {
-        form.style.display = 'none';
-        document.getElementById('success-msg').classList.add('active');
-        document.querySelector('.tracker').style.display = 'none';
-    }, 1000);
+    try {
+      const response = await fetch(form.action, {
+        method: form.method,
+        headers: { Accept: 'application/json' },
+        body: new FormData(form)
+      });
+
+      if (!response.ok) {
+        throw new Error('Formspree request failed');
+      }
+
+      form.style.display = 'none';
+      document.getElementById('success-msg').classList.add('active');
+      document.querySelector('.tracker').style.display = 'none';
+    } catch (error) {
+      form.classList.remove('submitting');
+      submitBtn.innerHTML = 'Request access';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Try again';
+    }
   });
 
   document.querySelectorAll('input, select, textarea').forEach(input => {
