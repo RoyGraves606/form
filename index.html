@@ -429,6 +429,8 @@
     </div>
   </div>
 
+  <div id="form-error" class="error-text" style="display:none;margin-bottom:14px;"></div>
+
   <form id="vela-form" action="https://formspree.io/f/xlgqpeap" method="POST" accept-charset="UTF-8">
 
     <!-- Step 1: Basic Information -->
@@ -678,8 +680,13 @@
     e.preventDefault();
     if (!validateStep(currentStep)) return;
 
+    const errorEl = document.getElementById('form-error');
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+
     form.classList.add('submitting');
     const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnHtml = submitBtn.innerHTML;
     submitBtn.innerHTML = 'Sending…';
     submitBtn.disabled = true;
 
@@ -690,18 +697,31 @@
         body: new FormData(form)
       });
 
+      const payload = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error('Formspree request failed');
+        console.error('Formspree error', response.status, payload);
+        const msg = (payload && payload.error) ? payload.error : 'Submission failed. Please try again.';
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+        throw new Error(msg);
       }
 
+      console.log('Formspree response', payload);
       form.style.display = 'none';
       document.getElementById('success-msg').classList.add('active');
       document.querySelector('.tracker').style.display = 'none';
     } catch (error) {
+      console.error(error);
       form.classList.remove('submitting');
-      submitBtn.innerHTML = 'Request access';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Try again';
+      submitBtn.innerHTML = originalBtnHtml;
+
+      // Helpful hint when testing locally from file:// — CORS blocks some endpoints
+      if (location.protocol === 'file:') {
+        errorEl.textContent = 'Local file tests can be blocked by CORS — serve the page over HTTP (for example: `python -m http.server`).';
+        errorEl.style.display = 'block';
+      }
     }
   });
 
